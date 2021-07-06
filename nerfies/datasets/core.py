@@ -342,6 +342,7 @@ class DataSource(abc.ABC):
       rgb = image_utils.rescale_image(rgb, scale_factor)
 
     camera = self.load_camera(item_id, scale_factor)
+
     rays_dict: Dict[str, Any] = camera_to_rays(camera)
     rays_dict['rgb'] = rgb
     rays_dict['metadata'] = {}
@@ -368,10 +369,22 @@ class DataSource(abc.ABC):
         rays_dict['rel_depth'] = rel_depth[..., np.newaxis]
 
     logging.info(
-        '\tLoaded item %s: shape=%s, scale_factor=%f, metadata=%s',
+        ' Loaded item %s: pos=%s, \n ori=%s, \n pp=%s, focal=%f, shape=%s, scale_factor=%f, metadata=%s',
         item_id,
+        strarr(camera.position),
+        strarr(camera.orientation),
+        strarr(camera.principal_point),
+        sround(camera.focal_length),
         rgb.shape,
-        scale_factor,
+        sround(scale_factor),
         str(rays_dict.get('metadata')))
 
     return rays_dict
+
+safelog10 = lambda x: 0.0 if np.abs(x) < 1e-10 else np.log10(np.abs(x))
+sround = lambda x, d=1: np.round(x, max((-np.floor(safelog10(x)).astype(int) + d), 0))
+def strarr(x):
+
+  return str([sround(i) for i in np.asarray(x).reshape(-1).tolist()]).replace(" ","")
+
+

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Helper functions/classes for model definition."""
+from absl import logging
 
 from flax import linen as nn
 from flax import optim

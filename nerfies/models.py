@@ -14,6 +14,7 @@
 
 """Different model implementation plus a general port for all the models."""
 from typing import Any, Dict, Mapping, Optional, Tuple
+from absl import logging
 
 from flax import linen as nn
 import frozendict
@@ -119,10 +120,13 @@ class NerfModel(nn.Module):
         modules.SinusoidalEncoder, num_batch_dims=1)(
             num_freqs=self.num_nerf_viewdir_freqs)
     if self.use_appearance_metadata:
+      logging.debug(f"Nerf.Model.use_appearance_metadata: embeddings {self.num_appearance_embeddings}, features {self.num_appearance_features}")
       self.appearance_encoder = glo.GloEncoder(
           num_embeddings=self.num_appearance_embeddings,
           features=self.num_appearance_features)
+
     if self.use_camera_metadata:
+      logging.debug(f"Nerf.Model.use_camera_metadata: embeddings {self.num_camera_embeddings}, features {self.num_camera_features}")
       self.camera_encoder = glo.GloEncoder(
           num_embeddings=self.num_camera_embeddings,
           features=self.num_camera_features)
@@ -136,6 +140,12 @@ class NerfModel(nn.Module):
         skips=self.nerf_skips,
         alpha_channels=self.alpha_channels,
         rgb_channels=self.rgb_channels)
+    _td = self.nerf_trunk_depth
+    _tw = self.nerf_trunk_depth
+    _cd = self.nerf_trunk_depth
+    _cw = self.nerf_trunk_depth
+    logging.debug(f"Nerf.Model.nerf_coarse: samples {self.num_coarse_samples} Trunk:d,w ({_td} {_tw}), Cond:d,w {_cd} {_cw}")
+      
     if self.num_fine_samples > 0:
       self.nerf_fine = modules.NerfMLP(
           nerf_trunk_depth=self.nerf_trunk_depth,
@@ -146,10 +156,13 @@ class NerfModel(nn.Module):
           skips=self.nerf_skips,
           alpha_channels=self.alpha_channels,
           rgb_channels=self.rgb_channels)
+      logging.debug(f"Nerf.Model.nerf_fine: samples {self.num_fine_samples} skips {self.nerf_skips}")
     else:
       self.nerf_fine = None
 
     if self.use_warp:
+      logging.debug(f"Nerf.Model.use_warp: fqs {self.num_warp_freqs} embeddings {self.num_warp_embeddings} num_features {self.num_warp_features}")
+
       self.warp_field = warping.create_warp_field(
           field_type=self.warp_field_type,
           num_freqs=self.num_warp_freqs,
