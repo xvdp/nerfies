@@ -133,16 +133,15 @@ def train_step(model: models.NerfModel,
   rng_key, fine_key, coarse_key, reg_key = random.split(rng_key, 4)
 
   # pylint: disable=unused-argument
+
   def _compute_loss_and_stats(params, model_out, use_elastic_loss=False):
     rgb_loss = ((model_out['rgb'] - batch['rgb'][..., :3])**2).mean()
-    logging.debug(f"train_step()_compute_loss_and_stats() rgb_loss {rgb_loss}")
 
     stats = {
         'loss/rgb': rgb_loss,
     }
     loss = rgb_loss
     if use_elastic_loss:
-      logging.debug("train_step()_compute_loss_and_stats()use_elastic_loss:")
 
       v_elastic_fn = jax.jit(vmap(vmap(compute_elastic_loss)))
       weights = lax.stop_gradient(model_out['weights'])
@@ -164,7 +163,6 @@ def train_step(model: models.NerfModel,
       loss += scalar_params.elastic_loss_weight * elastic_loss
 
     if 'warp_jacobian' in model_out:
-      logging.debug("train_step()_compute_loss_and_stats() warp_jacobian")
       jacobian = model_out['warp_jacobian']
       jacobian_det = jnp.linalg.det(jacobian)
       jacobian_div = utils.jacobian_to_div(jacobian)
@@ -186,18 +184,15 @@ def train_step(model: models.NerfModel,
                           'fine': fine_key,
                           'coarse': coarse_key
                       })
-
     losses = {}
     stats = {}
     if 'fine' in ret:
       losses['fine'], stats['fine'] = _compute_loss_and_stats(
           params, ret['fine'])
-      logging.debug(f"train_step() _loss_fn() losses['fine'] {losses['fine']}")
-      
+
     if 'coarse' in ret:
       losses['coarse'], stats['coarse'] = _compute_loss_and_stats(
           params, ret['coarse'], use_elastic_loss=use_elastic_loss)
-      logging.debug(f"train_step() _loss_fn() losses['coarse'] {losses['coarse']}")
 
     if use_background_loss:
       background_loss = compute_background_loss(
@@ -207,17 +202,11 @@ def train_step(model: models.NerfModel,
           key=reg_key,
           points=batch['background_points'],
           noise_std=scalar_params.background_noise_std)
-      logging.debug(f"background_loss shape {background_loss.shape}")
-      
       background_loss = background_loss.mean()
-      logging.debug(f"background_loss mean {background_loss}")
 
       losses['background'] = (
           scalar_params.background_loss_weight * background_loss)
       stats['background_loss'] = background_loss
-      logging.debug(f"background_loss weighted {losses['background']}")
-      logging.debug(f"losses {losses.values()}")
-
 
     return sum(losses.values()), stats
 
